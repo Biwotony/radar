@@ -1,0 +1,35 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+jobs:
+  test-and-typecheck:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install dependencies
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm install
+
+      - name: Test
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm test
+
+      - name: Typecheck
+        if: ${{ hashFiles('package.json') != '' }}
+        run: npm run typecheck
+
+      - name: No Node project yet
+        if: ${{ hashFiles('package.json') == '' }}
+        run: echo "No package.json on this branch; Node checks will activate automatically once the TypeScript project lands."
