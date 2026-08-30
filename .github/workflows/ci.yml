@@ -17,13 +17,19 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
 
       - name: Install dependencies
+        if: ${{ hashFiles('package.json') != '' }}
         run: npm install
 
       - name: Test
+        if: ${{ hashFiles('package.json') != '' }}
         run: npm test
 
       - name: Typecheck
+        if: ${{ hashFiles('package.json') != '' }}
         run: npm run typecheck
+
+      - name: No Node project yet
+        if: ${{ hashFiles('package.json') == '' }}
+        run: echo "No package.json on this branch; Node checks will activate automatically once the TypeScript project lands."
