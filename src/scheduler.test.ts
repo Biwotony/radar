@@ -50,8 +50,8 @@ test('runSourceOnce fetches, parses, persists and logs stats exactly once', asyn
   };
 
   const client: SqlClient = {
-    async query() {
-      return { rows: [] };
+    async query<T extends Record<string, unknown>>() {
+      return { rows: [] as T[] };
     },
   };
 
@@ -92,19 +92,18 @@ test('runSourceOnce fetches, parses, persists and logs stats exactly once', asyn
 
 test('loadSourcePolicy returns the active source crawl interval', async () => {
   const client: SqlClient = {
-    async query() {
-      return {
-        rows: [
-          {
-            policy: {
-              crawlIntervalMinutes: 30,
-              missingBeforeStale: 2,
-              missingBeforeInactive: 6,
-              explicit404MeansRemoved: false,
-            },
+    async query<T extends Record<string, unknown>>() {
+      const rows = [
+        {
+          policy: {
+            crawlIntervalMinutes: 30,
+            missingBeforeStale: 2,
+            missingBeforeInactive: 6,
+            explicit404MeansRemoved: false,
           },
-        ],
-      };
+        },
+      ];
+      return { rows: rows as unknown as T[] };
     },
   };
 
