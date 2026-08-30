@@ -139,6 +139,8 @@ function confirmedOrNotStated(value: string | null): ExtractedFact<string> {
 
 export class WohnraumGesuchtSource implements HousingSource {
   async fetch(): Promise<RawItem[]> {
+    // Audited 2026-08-30: the live index is single-page; if pagination appears later,
+    // this fetch will need explicit traversal or results beyond page 1 would be missed.
     const response = await fetch(INDEX_URL, {
       headers: {
         Accept: 'text/html,application/xhtml+xml',
