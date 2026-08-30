@@ -1,7 +1,13 @@
 import pg from 'pg';
 
 import { persistSuccessfulSourceFetch, type SqlClient } from './persistence.js';
-import { loadSourcePolicy, runSourceOnce, sleep } from './scheduler.js';
+import {
+  failureLog,
+  loadSourcePolicy,
+  runLoopCycle,
+  runSourceOnce,
+  sleep,
+} from './scheduler.js';
 import { WohnraumGesuchtSource } from './sources/wohnraumGesucht.js';
 
 const SOURCE_NAME = 'wohnraum-gesucht.de';
@@ -27,18 +33,28 @@ function asSqlClient(client: pg.PoolClient): SqlClient {
   };
 }
 
-async function runOnce(): Promise<void> {
+async function withClient<T>(work: (client: SqlClient) => Promise<T>): Promise<T> {
   const client = await pool.connect();
   try {
-    await runSourceOnce(
-      SOURCE_NAME,
-      source,
-      asSqlClient(client),
-      persistSuccessfulSourceFetch,
-    );
+    return await work(asSqlClient(client));
   } finally {
     client.release();
   }
+}
+
+async function runOnce(): Promise<void> {
+  await withClient((client) =>
+    runSourceOnce(
+      SOURCE_NAME,
+      source,
+      client,
+      persistSuccessfulSourceFetch,
+    ).then(() => undefined),
+  );
+}
+
+async function loadPolicy() {
+  return withClient((client) => loadSourcePolicy(client, SOURCE_NAME));
 }
 
 async function main(): Promise<void> {
@@ -48,17 +64,20 @@ async function main(): Promise<void> {
       return;
     }
 
-    while (true) {
-      await runOnce();
+    // Startup preflight: fail loudly/non-zero if the database or active source policy
+    // is unavailable before the unattended loop starts.
+    let intervalMinutes = (await loadPolicy()).crawlIntervalMinutes;
 
-      const client = await pool.connect();
-      let intervalMinutes: number;
-      try {
-        const policy = await loadSourcePolicy(asSqlClient(client), SOURCE_NAME);
-        intervalMinutes = policy.crawlIntervalMinutes;
-      } finally {
-        client.release();
-      }
+    while (true) {
+      // Intentionally sequential: the next cycle is not started until the current
+      // fetch/parse/persist path has completed and the full sleep interval has elapsed.
+      // Persistence also serializes same-source writes on the source row.
+      intervalMinutes = await runLoopCycle(
+        SOURCE_NAME,
+        intervalMinutes,
+        runOnce,
+        loadPolicy,
+      );
 
       console.info(
         JSON.stringify({
@@ -75,12 +94,6 @@ async function main(): Promise<void> {
 }
 
 main().catch((error: unknown) => {
-  console.error(
-    JSON.stringify({
-      source: SOURCE_NAME,
-      event: 'run_failed',
-      error: error instanceof Error ? error.message : String(error),
-    }),
-  );
+  console.error(JSON.stringify(failureLog(SOURCE_NAME, error)));
   process.exitCode = 1;
 });
