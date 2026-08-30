@@ -6,7 +6,9 @@
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
     "wohnraum:once": "tsx src/runWohnraum.ts --once",
-    "wohnraum:loop": "tsx src/runWohnraum.ts"
+    "wohnraum:loop": "tsx src/runWohnraum.ts",
+    "alerts:once": "tsx src/runAlerts.ts --once",
+    "alerts:loop": "tsx src/runAlerts.ts"
   },
   "dependencies": {
     "cheerio": "^1.0.0",
