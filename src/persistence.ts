@@ -236,8 +236,6 @@ export async function persistSuccessfulSourceFetch(
         observedAt,
       );
 
-      let listingId: string;
-
       if (!existing) {
         const inserted = await client.query<{ id: string }>(
           `INSERT INTO listings (
@@ -254,17 +252,13 @@ export async function persistSuccessfulSourceFetch(
           throw new Error(`Failed to create listing for ${observation.externalId}`);
         }
 
-        listingId = created.id;
-
         await client.query(
           `INSERT INTO listing_source_items (listing_id, source_item_id, created_at)
            VALUES ($1, $2, $3)
            ON CONFLICT DO NOTHING`,
-          [listingId, sourceItem.id, observedAt],
+          [created.id, sourceItem.id, observedAt],
         );
       } else {
-        listingId = existing.id;
-
         await client.query(
           `UPDATE listings
            SET lifecycle_state = 'ACTIVE',
@@ -275,7 +269,7 @@ export async function persistSuccessfulSourceFetch(
                updated_at = $3
            WHERE id = $1`,
           [
-            listingId,
+            existing.id,
             JSON.stringify(transition.extractedFacts),
             observedAt,
             transition.factsChanged,
@@ -300,13 +294,19 @@ export async function persistSuccessfulSourceFetch(
         `SELECT
            l.id,
            l.lifecycle_state,
-           MIN(si.consecutive_misses) AS min_misses
+           (
+             SELECT MIN(si.consecutive_misses)
+             FROM listing_source_items all_lsi
+             JOIN source_items si ON si.id = all_lsi.source_item_id
+             WHERE all_lsi.listing_id = l.id
+           ) AS min_misses
          FROM listings l
-         JOIN listing_source_items target_lsi ON target_lsi.listing_id = l.id
-         JOIN listing_source_items all_lsi ON all_lsi.listing_id = l.id
-         JOIN source_items si ON si.id = all_lsi.source_item_id
-         WHERE target_lsi.source_item_id = ANY($1::bigint[])
-         GROUP BY l.id, l.lifecycle_state
+         WHERE EXISTS (
+           SELECT 1
+           FROM listing_source_items target_lsi
+           WHERE target_lsi.listing_id = l.id
+             AND target_lsi.source_item_id = ANY($1::bigint[])
+         )
          FOR UPDATE OF l`,
         [missedIds],
       );
