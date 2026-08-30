@@ -29,6 +29,20 @@ export type ListingTransition = ListingState & {
   factsChanged: boolean;
 };
 
+export type LifecycleTransitionRecord = {
+  listingId: string;
+  from: LifecycleState;
+  to: LifecycleState;
+};
+
+export type PersistenceStats = {
+  itemsSeen: number;
+  listingsCreated: number;
+  listingsUpdated: number;
+  listingsChanged: number;
+  lifecycleTransitions: LifecycleTransitionRecord[];
+};
+
 export interface SqlClient {
   query<T extends Record<string, unknown> = Record<string, unknown>>(
     text: string,
@@ -160,7 +174,15 @@ export async function persistSuccessfulSourceFetch(
   sourceName: string,
   observations: Observation[],
   observedAt: Date = new Date(),
-): Promise<void> {
+): Promise<PersistenceStats> {
+  const stats: PersistenceStats = {
+    itemsSeen: observations.length,
+    listingsCreated: 0,
+    listingsUpdated: 0,
+    listingsChanged: 0,
+    lifecycleTransitions: [],
+  };
+
   await client.query('BEGIN');
 
   try {
@@ -258,6 +280,8 @@ export async function persistSuccessfulSourceFetch(
            ON CONFLICT DO NOTHING`,
           [created.id, sourceItem.id, observedAt],
         );
+
+        stats.listingsCreated += 1;
       } else {
         await client.query(
           `UPDATE listings
@@ -275,6 +299,18 @@ export async function persistSuccessfulSourceFetch(
             transition.factsChanged,
           ],
         );
+
+        stats.listingsUpdated += 1;
+        if (transition.factsChanged) {
+          stats.listingsChanged += 1;
+        }
+        if (existing.lifecycle_state !== 'ACTIVE') {
+          stats.lifecycleTransitions.push({
+            listingId: existing.id,
+            from: existing.lifecycle_state,
+            to: 'ACTIVE',
+          });
+        }
       }
     }
 
@@ -311,6 +347,10 @@ export async function persistSuccessfulSourceFetch(
         [missedIds],
       );
 
+      // Freshness is intentionally source-relative: backing items only accrue misses
+      // when their own source runs. Revisit this when source #2 is enabled. At that
+      // point also lock canonical listing IDs in a deterministic order to avoid
+      // cross-source deadlocks when two runs can touch the same listings concurrently.
       for (const listing of affectedListings.rows) {
         const nextState = stateAfterMisses(
           listing.lifecycle_state,
@@ -326,11 +366,17 @@ export async function persistSuccessfulSourceFetch(
              WHERE id = $1`,
             [listing.id, nextState, observedAt],
           );
+          stats.lifecycleTransitions.push({
+            listingId: listing.id,
+            from: listing.lifecycle_state,
+            to: nextState,
+          });
         }
       }
     }
 
     await client.query('COMMIT');
+    return stats;
   } catch (error) {
     await client.query('ROLLBACK');
     throw error;
