@@ -2,7 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import type { PersistenceStats, SqlClient } from './persistence.js';
-import { loadSourcePolicy, runSourceOnce, type SchedulerLog } from './scheduler.js';
+import {
+  loadSourcePolicy,
+  runLoopCycle,
+  runSourceOnce,
+  type SchedulerFailureLog,
+  type SchedulerLog,
+} from './scheduler.js';
 import type { HousingSource, Observation, RawItem } from './sources/types.js';
 
 const rawItem: RawItem = {
@@ -111,4 +117,52 @@ test('loadSourcePolicy returns the active source crawl interval', async () => {
   assert.equal(policy.crawlIntervalMinutes, 30);
   assert.equal(policy.missingBeforeStale, 2);
   assert.equal(policy.missingBeforeInactive, 6);
+});
+
+test('runLoopCycle logs a transient failure and keeps the previous interval', async () => {
+  const logs: SchedulerFailureLog[] = [];
+  const networkError = Object.assign(new Error('upstream timed out'), {
+    code: 'ETIMEDOUT',
+    statusCode: 504,
+  });
+
+  const interval = await runLoopCycle(
+    'wohnraum-gesucht.de',
+    30,
+    async () => {
+      throw networkError;
+    },
+    async () => {
+      throw new Error('policy reload should not run after failed source cycle');
+    },
+    (entry) => logs.push(entry),
+  );
+
+  assert.equal(interval, 30);
+  assert.deepEqual(logs, [
+    {
+      source: 'wohnraum-gesucht.de',
+      event: 'run_failed',
+      error: 'upstream timed out',
+      code: 'ETIMEDOUT',
+      status: undefined,
+      statusCode: 504,
+    },
+  ]);
+});
+
+test('runLoopCycle refreshes the interval after a successful run', async () => {
+  const interval = await runLoopCycle(
+    'wohnraum-gesucht.de',
+    30,
+    async () => undefined,
+    async () => ({
+      crawlIntervalMinutes: 45,
+      missingBeforeStale: 2,
+      missingBeforeInactive: 6,
+      explicit404MeansRemoved: false,
+    }),
+  );
+
+  assert.equal(interval, 45);
 });
