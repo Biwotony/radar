@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import type { SqlClient } from './persistence.js';
+import type { LifecycleState, SqlClient } from './persistence.js';
 import type { ExtractedFact } from './sources/types.js';
 
 const SUPPORTED_HOUSING_TYPES = ['dorm', 'wg', 'studio'] as const;
@@ -17,7 +17,7 @@ export type AlertCandidate = {
   moveInMonth: Date | string | null;
   housingTypes: string[];
   listingId: string;
-  lifecycleState: 'NEW' | 'ACTIVE';
+  lifecycleState: LifecycleState;
   extractedFacts: ListingFacts;
   sourceUrl: string;
 };
@@ -150,25 +150,33 @@ function renderFact(label: string, extracted: ExtractedFact<unknown> | undefined
 
 export function buildAlertEmail(candidate: AlertCandidate): AlertEmail {
   const facts = candidate.extractedFacts;
-  const lines = [
-    'A new student-housing listing matches your Radar search.',
-    '',
+  const factLines = [
     renderFact('Room type', facts.roomType),
     renderFact('Area', facts.area),
     renderFact('Move-in', facts.availableFrom),
     renderFact('Total monthly rent', facts.totalMonthlyRent),
     renderFact('University eligibility', facts.eligibleUniversities),
+  ];
+  const text = [
+    'A new student-housing listing matches your Radar search.',
+    '',
+    ...factLines,
     '',
     `Listing freshness: ${candidate.lifecycleState}`,
     `Source: ${candidate.sourceUrl}`,
     '',
     'Radar does not fill in facts the source did not state.',
-  ];
+  ].join('\n');
 
-  const text = lines.join('\n');
-  const html = lines
-    .map((line) => (line === '' ? '<br>' : `<p>${escapeHtml(line)}</p>`))
-    .join('');
+  const htmlFacts = factLines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+  const safeUrl = escapeHtml(candidate.sourceUrl);
+  const html = [
+    '<p>A new student-housing listing matches your Radar search.</p>',
+    htmlFacts,
+    `<p>Listing freshness: ${escapeHtml(candidate.lifecycleState)}</p>`,
+    `<p><a href="${safeUrl}">View the original listing</a></p>`,
+    '<p>Radar does not fill in facts the source did not state.</p>',
+  ].join('');
 
   return {
     to: candidate.email,
