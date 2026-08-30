@@ -13,7 +13,9 @@ export type ExtractedFact<T> = {
 export type RawItem = {
   externalId: string;
   sourceUrl: string;
-  summaryText: string;
+  roomType: string | null;
+  area: string | null;
+  availableFromRaw: string | null;
 };
 
 export type Observation = {
