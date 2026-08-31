@@ -37,11 +37,11 @@ test('expired or already-used magic links are rejected by the atomic consume pre
   const now = new Date('2026-08-31T18:00:00Z');
   const user = await repository.consumeMagicLink(hashToken('expired-token'), now, hashToken('session'), new Date(now.getTime() + 1000));
   assert.equal(user, null);
-  const consume = db.calls.find((call) => call.text.startsWith('UPDATE magic_link_tokens'));
+  const consume = db.calls.find((call) => call.text.includes('UPDATE magic_link_tokens'));
   assert.ok(consume);
-  assert.match(consume.text, /m\.status = 'sent'/);
-  assert.match(consume.text, /m\.used_at IS NULL/);
-  assert.match(consume.text, /m\.expires_at > \$2/);
+  assert.match(consume.text, /status IN \('pending', 'sent'\)/);
+  assert.match(consume.text, /used_at IS NULL/);
+  assert.match(consume.text, /expires_at > \$2/);
   assert.equal(db.calls.some((call) => call.text.startsWith('INSERT INTO user_sessions')), false);
 });
 
