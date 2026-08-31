@@ -58,6 +58,7 @@ button, .primaryButton { border: 1px solid var(--accent); background: var(--acce
 .status.unknown { background: #eef1f4; color: #556070; }
 .status.caution { background: var(--warn-soft); color: var(--warn); }
 .note { background: var(--warn-soft); border-radius: 10px; padding: 11px 13px; color: #684400; font-size: .9rem; }
+.successNote { background: var(--accent-soft); border-radius: 10px; padding: 11px 13px; color: var(--accent); font-size: .9rem; }
 .smallNote { color: var(--muted); font-size: .82rem; }
 .cardActions { display: flex; gap: 18px; margin-top: 18px; }
 .cardActions a { font-weight: 750; }
@@ -73,11 +74,20 @@ button, .primaryButton { border: 1px solid var(--accent); background: var(--acce
 .detailFacts dl div { display: grid; grid-template-columns: 180px 1fr; gap: 20px; padding: 14px 0; border-top: 1px solid var(--line); }
 .detailFacts dt { color: var(--muted); }
 .detailFacts dd { margin: 0; display: flex; justify-content: space-between; gap: 16px; align-items: center; }
+.alertsPage { max-width: 980px; margin: 0 auto; }
+.authForm { max-width: 560px; }
+.alertsLayout { display: grid; grid-template-columns: minmax(300px, 420px) minmax(0, 1fr); gap: 28px; align-items: start; }
+.savedSearches { display: grid; gap: 14px; }
+.savedSearches h2 { margin: 0 0 4px; }
+.savedSearchCard { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; }
+.savedSearchCard p { margin: 7px 0 10px; color: var(--muted); }
+.savedSearchActions { display: flex; gap: 8px; }
+.dangerButton { color: #8b1e1e; }
 @media (max-width: 760px) {
   .siteHeader { padding: 0 16px; }
   .shell { width: min(100% - 24px, 1120px); padding-top: 28px; }
   .pageHeading { flex-direction: column; }
-  .resultsLayout { display: block; }
+  .resultsLayout, .alertsLayout { display: block; }
   .filterSidebar { display: none; }
   .mobileFilters { display: block; }
   .mobileFilters summary { font-weight: 750; cursor: pointer; margin-bottom: 10px; }
@@ -86,4 +96,6 @@ button, .primaryButton { border: 1px solid var(--accent); background: var(--acce
   .freshnessPanel { flex-direction: column; }
   .detailFacts dl div { grid-template-columns: 1fr; gap: 6px; }
   .detailFacts dd { align-items: flex-start; }
+  .savedSearches { margin-top: 28px; }
+  .savedSearchCard { flex-direction: column; }
 }
