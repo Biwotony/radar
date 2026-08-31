@@ -3,6 +3,9 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "tsx --test src/**/*.test.ts",
     "wohnraum:once": "tsx src/runWohnraum.ts --once",
@@ -12,11 +15,16 @@
   },
   "dependencies": {
     "cheerio": "^1.0.0",
-    "pg": "^8.13.1"
+    "next": "^15.5.0",
+    "pg": "^8.13.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
     "@types/pg": "^8.11.10",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0"
   }
