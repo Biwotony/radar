@@ -22,8 +22,8 @@ export type HousingFilters = {
 let pool: pg.Pool | null = null;
 
 function getPool(): pg.Pool {
-  const databaseUrl = process.env.DATABASE_URL;
-  if (!databaseUrl) throw new Error('DATABASE_URL is required to render housing data');
+  const databaseUrl = process.env.READONLY_DATABASE_URL;
+  if (!databaseUrl) throw new Error('READONLY_DATABASE_URL is required to render housing data');
   pool ??= new pg.Pool({ connectionString: databaseUrl, max: 5 });
   return pool;
 }
