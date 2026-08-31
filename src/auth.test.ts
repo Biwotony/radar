@@ -53,7 +53,10 @@ class OwnedSearchDb implements SqlClient {
   async query<T extends Row>(text: string, values: readonly unknown[] = []): Promise<{ rows: T[] }> {
     if (text.startsWith('SELECT id, university')) {
       const userId = String(values[0]);
-      return { rows: [...this.searches.entries()].filter(([, value]) => value.userId === userId).map(([id, value]) => ({ id, university: 'frankfurt_uas', max_total_monthly_rent: 500, move_in_month: null, housing_types: ['dorm', 'wg', 'studio'], is_active: value.active })) as T[] };
+      const rows = [...this.searches.entries()]
+        .filter(([, value]) => value.userId === userId)
+        .map(([id, value]) => ({ id, university: 'frankfurt_uas', max_total_monthly_rent: 500, move_in_month: null, housing_types: ['dorm', 'wg', 'studio'], is_active: value.active }));
+      return { rows: rows as unknown as T[] };
     }
     if (text.startsWith('UPDATE saved_searches')) {
       assert.match(text, /WHERE id = \$1 AND user_id = \$2/);
@@ -61,7 +64,7 @@ class OwnedSearchDb implements SqlClient {
       const row = this.searches.get(id);
       if (!row || row.userId !== userId) return { rows: [] as T[] };
       row.active = active === 'true';
-      return { rows: [{ id }] as T[] };
+      return { rows: [{ id }] as unknown as T[] };
     }
     if (text.startsWith('DELETE FROM saved_searches')) {
       assert.match(text, /WHERE id = \$1 AND user_id = \$2/);
@@ -70,7 +73,7 @@ class OwnedSearchDb implements SqlClient {
       const row = this.searches.get(id);
       if (!row || row.userId !== userId) return { rows: [] as T[] };
       this.searches.delete(id);
-      return { rows: [{ id }] as T[] };
+      return { rows: [{ id }] as unknown as T[] };
     }
     return { rows: [] as T[] };
   }
