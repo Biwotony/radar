@@ -68,7 +68,7 @@ export default async function HousingPage({ searchParams }: { searchParams: Prom
                   <div><dt>Rent</dt><dd>{rent.value} <span className={statusClass(rent.status)}>{rent.status.replace('_', ' ').toLowerCase()}</span></dd></div>
                   <div><dt>Area</dt><dd><span className={statusClass(area.status)}>{area.status.replace('_', ' ').toLowerCase()}</span></dd></div>
                 </dl>
-                {rent.status === 'NOT_STATED' ? <p className="note">Price is not stated in Radar. Check the original listing before applying.</p> : null}
+                {rent.status === 'NOT_STATED' ? <p className="note">Rent is not stated in Radar. Check the original listing for the actual price before applying.</p> : null}
                 <div className="cardActions">
                   <Link href={`/housing/${listing.id}`}>View details</Link>
                   <a href={listing.sourceUrl} target="_blank" rel="noreferrer">Original source ↗</a>
